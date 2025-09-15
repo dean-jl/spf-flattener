@@ -2,12 +2,13 @@
 
 ## 🛠 Reporting a Vulnerability
 
-We do **not** accept direct email reports. Instead, please:
+Please use the **Security Report** issue template by clicking:
 
-- Use the [Security Report issue template](https://github.com/dean-jl/spf-flattener/issues/new?template=security.yml)
-- Or start a thread in [Discussions → Security](https://github.com/dean-jl/spf-flattener/discussions/categories/security)
+👉 [New Issue](https://github.com/dean-jl/spf-flattener/issues/new)
 
-Please avoid posting sensitive data.  We will do our best to respond promptly.  We encourage responsible disclosure and community engagement to resolve security concerns.
+Then select **🔐 Security Report** from the list.
+
+Do not include sensitive data. For private concerns, start a thread in [Discussions → Security](https://github.com/dean-jl/spf-flattener/discussions/categories/security).
 
 ---
 
@@ -17,3 +18,5 @@ Once validated:
 - We’ll acknowledge the report
 - Patch the issue if confirmed
 - Credit contributors unless anonymity is requested
+
+
