@@ -2,13 +2,13 @@
 
 ## 🛠 Reporting a Vulnerability
 
-Please use the **Security Report** issue template by clicking:
+Please do **not** use the “Report a security vulnerability” button above—it redirects back to this page.
 
-👉 [New Issue](https://github.com/dean-jl/spf-flattener/issues/new)
+Instead, click [New Issue](https://github.com/dean-jl/spf-flattener/issues/new), then select **🔐 Security Report** from the list of templates.
 
-Then select **🔐 Security Report** from the list.
+If you're unsure whether to disclose publicly, start a thread in [Discussions → Security](https://github.com/dean-jl/spf-flattener/discussions/categories/security).
 
-Do not include sensitive data. For private concerns, start a thread in [Discussions → Security](https://github.com/dean-jl/spf-flattener/discussions/categories/security).
+Do not include sensitive data. We’ll triage and respond promptly.  We encourage responsible disclosure and community engagement to resolve security concerns.
 
 ---
 
