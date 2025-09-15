@@ -1,0 +1,36 @@
+name: ✨ Feature Request
+description: Suggest an enhancement or new capability
+title: "[Feature] "
+labels: [enhancement]
+assignees: []
+
+body:
+- type: markdown
+  attributes:
+  value: |
+  Got an idea to improve the tool? Share it below—especially if it helps others extend or automate SPF flattening.
+
+- type: input
+  id: summary
+  attributes:
+  label: Feature Summary
+  description: What would you like to see added or changed?
+  placeholder: e.g., Add support for Cloudflare DNS provider
+
+- type: textarea
+  id: motivation
+  attributes:
+  label: Why Is This Useful?
+  description: Describe the use case or problem this solves
+
+- type: textarea
+  id: implementation
+  attributes:
+  label: Implementation Ideas
+  description: Optional—how might this be implemented?
+
+- type: textarea
+  id: related
+  attributes:
+  label: Related Context
+  description: Link to any related issues, forks, or discussions

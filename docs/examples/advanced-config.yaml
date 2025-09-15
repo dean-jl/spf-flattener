@@ -1,0 +1,56 @@
+# Advanced SPF Flattener Configuration
+# This example shows advanced configuration options for complex scenarios
+
+# Global DNS provider
+provider: porkbun
+
+# Multiple DNS servers with fallback
+dns:
+  - name: Primary DNS
+    ip: 8.8.8.8
+  - name: Secondary DNS
+    ip: 1.1.1.1
+  - name: Corporate DNS
+    ip: 10.0.0.1
+
+# Domain configurations with different providers (future extensibility)
+domains:
+  # Primary domain with detailed configuration
+  - name: example.com
+    provider: porkbun
+    # Get your API key from https://porkbun.com/account/api
+    api_key: "your_porkbun_api_key"
+    # Get your secret key from https://porkbun.com/account/api
+    secret_key: "your_porkbun_secret_key"
+    ttl: 3600
+    dry_run: false
+    verbose: true
+    # Backup-specific settings
+    backup_before_changes: true
+    conflict_strategy: "skip"
+
+  # Domain with different TTL and logging
+  - name: api.example.com
+    provider: porkbun
+    # Get your API key from https://porkbun.com/account/api
+    api_key: "your_porkbun_api_key"
+    # Get your secret key from https://porkbun.com/account/api
+    secret_key: "your_porkbun_secret_key"
+    ttl: 300  # Short TTL for API subdomain
+    dry_run: false
+    verbose: false
+
+  # Domain for testing/development
+  - name: test.example.com
+    provider: porkbun
+    # Get your API key from https://porkbun.com/account/api
+    api_key: "your_porkbun_api_key"
+    # Get your secret key from https://porkbun.com/account/api
+    secret_key: "your_porkbun_secret_key"
+    ttl: 60   # Very short TTL for testing
+    dry_run: true   # Always use dry-run for test domains
+    verbose: true
+
+# Environment variables for sensitive data:
+# SPF_FLATTENER_API_KEY="your_api_key"
+# SPF_FLATTENER_SECRET_KEY="your_secret_key"

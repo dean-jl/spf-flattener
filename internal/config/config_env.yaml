@@ -1,0 +1,6 @@
+
+provider: porkbun
+domains:
+  - name: envdomain.com
+    api_key: ""
+    secret_key: ""

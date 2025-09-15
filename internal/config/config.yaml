@@ -1,0 +1,9 @@
+
+provider: porkbun
+domains:
+  - name: example.com
+    api_key: "pk1_..."
+    secret_key: "sk1_..."
+  - name: another-domain.com
+    api_key: "pk2_..."
+    secret_key: "sk2_..."

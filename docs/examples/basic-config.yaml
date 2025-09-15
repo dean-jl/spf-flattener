@@ -1,0 +1,39 @@
+# Basic SPF Flattener Configuration with Backup Support
+# This example shows the minimal configuration needed for SPF flattening and backup operations
+
+# Global DNS provider setting (can be overridden per domain)
+provider: porkbun
+
+# Optional: Custom DNS servers for corporate environments
+dns:
+  - name: Google
+    ip: 8.8.8.8
+  - name: Cloudflare
+    ip: 1.1.1.1
+
+# Domain configurations
+domains:
+  - name: example.com
+    provider: porkbun
+    # Get your API key from https://porkbun.com/account/api
+    api_key: "your_porkbun_api_key"
+    # Get your secret key from https://porkbun.com/account/api
+    secret_key: "your_porkbun_secret_key"
+    ttl: 3600
+    # Optional: Per-domain settings
+    dry_run: false
+    verbose: true
+
+  - name: mydomain.org
+    provider: porkbun
+    # Get your API key from https://porkbun.com/account/api
+    api_key: "your_porkbun_api_key"
+    # Get your secret key from https://porkbun.com/account/api
+    secret_key: "your_porkbun_secret_key"
+    ttl: 7200
+    dry_run: false
+    verbose: false
+
+# Environment variable support:
+# SPF_FLATTENER_API_KEY="your_api_key"
+# SPF_FLATTENER_SECRET_KEY="your_secret_key"

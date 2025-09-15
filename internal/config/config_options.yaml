@@ -1,0 +1,8 @@
+
+provider: porkbun
+domains:
+  - name: optdomain.com
+    api_key: "optkey"
+    secret_key: "optsecret"
+logging: true
+dry_run: true

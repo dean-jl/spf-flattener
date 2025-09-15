@@ -1,0 +1,26 @@
+blank_issues_enabled: false
+contact_links: []
+issue_templates:
+  - name: 🐞 Bug Report
+    description: Report a reproducible issue or unexpected behavior
+    title: "[Bug] "
+    labels: ["bug"]
+    file: bug_report.md
+
+  - name: ✨ Feature Request
+    description: Suggest an enhancement or new capability
+    title: "[Feature] "
+    labels: ["enhancement"]
+    file: feature_request.md
+
+  - name: 💬 General Feedback
+    description: Share thoughts, suggestions, or usage experiences
+    title: "[Feedback] "
+    labels: ["feedback"]
+    file: general_feedback.md
+
+  - name: 🌐 DNS Provider Integration Request
+    description: Request support for a new DNS provider
+    title: "[Provider] "
+    labels: ["provider-request"]
+    file: provider_request.md
