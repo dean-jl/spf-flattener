@@ -18,3 +18,10 @@
 /.idea/SPF-Flattener.iml
 /.idea/vcs.xml
 /backups/
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
