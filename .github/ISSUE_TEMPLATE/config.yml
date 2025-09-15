@@ -24,3 +24,9 @@ issue_templates:
     title: "[Provider] "
     labels: ["provider-request"]
     file: provider_request.md
+
+  - name: 🔐 Security Report
+    description: Report a potential vulnerability or security concern
+    title: "[SECURITY] "
+    labels: ["security", "triage"]
+    file: security.yml
