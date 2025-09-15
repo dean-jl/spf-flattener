@@ -1,0 +1,25 @@
+name: "🔐 Security Report"
+description: Report a potential vulnerability or security concern
+title: "[SECURITY] "
+labels: ["security", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ Please do not include sensitive data in this report. This form is for initial triage only.
+
+        If you're unsure whether to disclose publicly, start a thread in [Discussions](https://github.com/dean-jl/spf-flattener/discussions) under the **Security** category.
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the issue
+      description: What behavior did you observe? Why do you think it’s a security concern?
+      placeholder: e.g., SPF flattening exposes internal IPs under certain conditions...
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce (if applicable)
+      description: Include any test cases, configs, or logs that help illustrate the issue.
+      placeholder: 1. Use config X... 2. Run command Y...
