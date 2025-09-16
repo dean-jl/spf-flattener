@@ -5,25 +5,25 @@ issue_templates:
     description: Report a reproducible issue or unexpected behavior
     title: "[Bug] "
     labels: ["bug"]
-    file: bug_report.md
+    file: bug_report.yml
 
   - name: ✨ Feature Request
     description: Suggest an enhancement or new capability
     title: "[Feature] "
     labels: ["enhancement"]
-    file: feature_request.md
+    file: feature_request.yml
 
   - name: 💬 General Feedback
     description: Share thoughts, suggestions, or usage experiences
     title: "[Feedback] "
     labels: ["feedback"]
-    file: general_feedback.md
+    file: general_feedback.yml
 
   - name: 🌐 DNS Provider Integration Request
     description: Request support for a new DNS provider
     title: "[Provider] "
     labels: ["provider-request"]
-    file: provider_request.md
+    file: provider_request.yml
 
   - name: 🔐 Security Report
     description: Report a potential vulnerability or security concern
