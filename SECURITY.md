@@ -2,7 +2,7 @@
 
 ## 🛠 Reporting a Vulnerability
 
-Please do **not** use the “Report a security vulnerability” button above—it redirects back to this page.
+Please do **not** use the “Report a security vulnerability” button on the New Issue page—it redirects back to this page.
 
 Instead, click [New Issue](https://github.com/dean-jl/spf-flattener/issues/new), then select **🔐 Security Report** from the list of templates.
 
