@@ -14,8 +14,9 @@ body:
     id: description
     attributes:
       label: Describe the issue
-      description: What behavior did you observe? Why do you think it’s a security concern?
+      description: What behavior did you observe? Why do you think it's a security concern?
       placeholder: e.g., SPF flattening exposes internal IPs under certain conditions...
+    validations:
       required: true
   - type: textarea
     id: reproduction
