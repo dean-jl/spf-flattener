@@ -25,3 +25,6 @@ Icon?
 ._*
 .Spotlight-V100
 .Trashes
+/dev-docs/
+/.idea/copilot.data.migration.ask2agent.xml
+/.idea/copilot.data.migration.ask.xml

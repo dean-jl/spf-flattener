@@ -328,6 +328,7 @@ type flattener struct {
 	flattenedIPs   map[string]bool
 	recursionStack map[string]bool
 	recursionErr   error
+	lookupCount    int // Track total DNS lookups performed (including duplicates)
 }
 
 func newFlattener(dns DNSProvider) *flattener {
@@ -336,6 +337,114 @@ func newFlattener(dns DNSProvider) *flattener {
 		flattenedIPs:   make(map[string]bool),
 		recursionStack: make(map[string]bool),
 	}
+}
+
+// CountDNSLookups counts the total number of DNS lookups required to resolve an SPF record.
+// This includes all TXT lookups for includes and any A/MX lookups, counting duplicates as separate lookups
+// since some mail servers don't implement proper caching.
+func CountDNSLookups(ctx context.Context, domain string, dns DNSProvider) (int, error) {
+	counter := &lookupCounter{
+		dns:      dns,
+		visited:  make(map[string]int), // Track how many times each domain is looked up
+		dnsCache: sync.Map{},
+	}
+
+	// Initial TXT lookup for the domain
+	counter.visited[domain]++
+
+	records, err := dns.LookupTXT(ctx, domain)
+	if err != nil {
+		return 0, fmt.Errorf("failed to retrieve SPF records for %s: %v", domain, err)
+	}
+
+	var spfRecord string
+	for _, record := range records {
+		if strings.HasPrefix(record, "v=spf1") {
+			spfRecord = record
+			break
+		}
+	}
+
+	if spfRecord == "" {
+		return 1, nil // Only the initial lookup was needed
+	}
+
+	err = counter.countMechanisms(ctx, spfRecord, domain, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	// Sum up all lookups (including duplicates)
+	totalLookups := 0
+	for _, count := range counter.visited {
+		totalLookups += count
+	}
+
+	return totalLookups, nil
+}
+
+type lookupCounter struct {
+	dns      DNSProvider
+	visited  map[string]int // domain -> count of lookups
+	dnsCache sync.Map
+}
+
+func (c *lookupCounter) countMechanisms(ctx context.Context, mechanism string, currentDomain string, depth int) error {
+	const maxDepth = 10
+	if depth > maxDepth {
+		return fmt.Errorf("recursion depth exceeded for %s", currentDomain)
+	}
+
+	parts := strings.Fields(mechanism)
+	for _, part := range parts {
+		if strings.HasPrefix(part, "include:") {
+			includeDomain := strings.TrimPrefix(part, "include:")
+
+			// Count this as a DNS lookup (even if it's a duplicate)
+			c.visited[includeDomain]++
+
+			var includeRecords []string
+			if cached, ok := c.dnsCache.Load(includeDomain); ok {
+				includeRecords = cached.([]string)
+			} else {
+				recs, err := c.dns.LookupTXT(ctx, includeDomain)
+				if err != nil {
+					return fmt.Errorf("failed to lookup included SPF for %s: %v", includeDomain, err)
+				}
+				includeRecords = recs
+				c.dnsCache.Store(includeDomain, recs)
+			}
+
+			for _, rec := range includeRecords {
+				if strings.HasPrefix(rec, "v=spf1") {
+					if err := c.countMechanisms(ctx, rec, includeDomain, depth+1); err != nil {
+						return err
+					}
+				}
+			}
+		} else if strings.HasPrefix(part, "a") {
+			domainToLookup := currentDomain
+			if strings.Contains(part, ":") {
+				domainToLookup = strings.Split(part, ":")[1]
+			}
+			// A mechanism requires a DNS lookup
+			c.visited[domainToLookup]++
+		} else if strings.HasPrefix(part, "mx") {
+			domainToLookup := currentDomain
+			if strings.Contains(part, ":") {
+				domainToLookup = strings.Split(part, ":")[1]
+			}
+			// MX mechanism requires a DNS lookup
+			c.visited[domainToLookup]++
+
+			// For accurate counting, we should also consider that MX records
+			// require additional A record lookups for each MX host, but this
+			// would require actually performing the lookups. For now, we'll
+			// count just the MX lookup itself.
+		}
+		// ip4: and ip6: don't require DNS lookups
+	}
+	return nil
 }
 
 func (f *flattener) processMechanism(ctx context.Context, mechanism string, currentDomain string, depth int) error {
@@ -447,7 +556,7 @@ func (f *flattener) processMechanism(ctx context.Context, mechanism string, curr
 //	original, flattened, err := FlattenSPF(ctx, "example.com", &DefaultDNSProvider{})
 //	// original might be: "v=spf1 include:_spf.google.com ~all"
 //	// flattened might be: "v=spf1 ip4:209.85.128.0/17 ip4:64.233.160.0/19 ~all"
-func FlattenSPF(ctx context.Context, domain string, dns DNSProvider) (string, string, error) {
+func FlattenSPF(ctx context.Context, domain string, dns DNSProvider, aggregate bool) (string, string, error) {
 	f := newFlattener(dns)
 
 	var originalRecords []string
@@ -492,9 +601,74 @@ func FlattenSPF(ctx context.Context, domain string, dns DNSProvider) (string, st
 		return originalSPF, originalSPF, nil
 	}
 
+	// Apply CIDR aggregation if enabled
+	if aggregate {
+		sorted = AggregateCIDRs(sorted)
+	}
+
 	sort.Strings(sorted)
 	flattened := "v=spf1 " + strings.Join(sorted, " ") + " ~all"
 	return originalSPF, flattened, nil
+}
+
+// FlattenSPFWithThreshold flattens an SPF record only if it exceeds the DNS lookup threshold.
+// This function checks if the SPF record requires more than 10 DNS lookups (RFC 7208 limit)
+// and only performs flattening if necessary, unless forceFlatten is true.
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout control
+//   - domain: The domain name to process SPF records for
+//   - dns: DNS provider for performing lookups
+//   - aggregate: Whether to apply CIDR aggregation to the flattened IPs
+//   - forceFlatten: If true, always flatten regardless of DNS lookup count
+//
+// Returns:
+//   - string: The original SPF record as found in DNS
+//   - string: The flattened SPF record (same as original if not flattened)
+//   - int: The total number of DNS lookups required by the original record
+//   - bool: Whether flattening was performed
+//   - error: Any error encountered during processing
+func FlattenSPFWithThreshold(ctx context.Context, domain string, dns DNSProvider, aggregate bool, forceFlatten bool) (string, string, int, bool, error) {
+	// First, count the DNS lookups required
+	lookupCount, err := CountDNSLookups(ctx, domain, dns)
+	if err != nil {
+		return "", "", 0, false, fmt.Errorf("failed to count DNS lookups: %v", err)
+	}
+
+	// Get the original SPF record
+	records, err := dns.LookupTXT(ctx, domain)
+	if err != nil {
+		return "", "", lookupCount, false, fmt.Errorf("failed to retrieve SPF records for %s: %v", domain, err)
+	}
+
+	var originalSPF string
+	for _, record := range records {
+		if strings.HasPrefix(record, "v=spf1") {
+			originalSPF = record
+			break
+		}
+	}
+
+	if originalSPF == "" {
+		return "", "", lookupCount, false, fmt.Errorf("no SPF record found for %s", domain)
+	}
+
+	// Check if flattening is needed (more than 10 lookups) or forced
+	const maxDNSLookups = 10
+	shouldFlatten := lookupCount > maxDNSLookups || forceFlatten
+
+	if !shouldFlatten {
+		// Return original record without flattening
+		return originalSPF, originalSPF, lookupCount, false, nil
+	}
+
+	// Perform flattening
+	_, flattened, err := FlattenSPF(ctx, domain, dns, aggregate)
+	if err != nil {
+		return originalSPF, "", lookupCount, false, err
+	}
+
+	return originalSPF, flattened, lookupCount, true, nil
 }
 
 // FlattenSPFContent flattens an SPF record from raw TXT content by resolving all 'include', 'a', 'mx', and 'ptr' mechanisms.

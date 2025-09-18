@@ -37,7 +37,7 @@ func BenchmarkFlattenSPF_Simple(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _, err := FlattenSPF(context.Background(), "example.com", provider)
+		_, _, err := FlattenSPF(context.Background(), "example.com", provider, false)
 		if err != nil {
 			b.Fatalf("FlattenSPF failed: %v", err)
 		}
@@ -56,7 +56,7 @@ func BenchmarkFlattenSPF_WithIncludes(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _, err := FlattenSPF(context.Background(), "example.com", provider)
+		_, _, err := FlattenSPF(context.Background(), "example.com", provider, false)
 		if err != nil {
 			b.Fatalf("FlattenSPF failed: %v", err)
 		}
@@ -77,7 +77,7 @@ func BenchmarkFlattenSPF_WithARecords(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _, err := FlattenSPF(context.Background(), "example.com", provider)
+		_, _, err := FlattenSPF(context.Background(), "example.com", provider, false)
 		if err != nil {
 			b.Fatalf("FlattenSPF failed: %v", err)
 		}
@@ -99,7 +99,7 @@ func BenchmarkFlattenSPF_DeepRecursion(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _, err := FlattenSPF(context.Background(), "example.com", provider)
+		_, _, err := FlattenSPF(context.Background(), "example.com", provider, false)
 		if err != nil {
 			b.Fatalf("FlattenSPF failed: %v", err)
 		}

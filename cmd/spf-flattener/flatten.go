@@ -20,10 +20,11 @@ import (
 	"golang.org/x/time/rate"
 )
 
-func processConfig(cmd *cobra.Command) (*config.Config, string, bool, error) {
+func processConfig(cmd *cobra.Command) (*config.Config, string, bool, bool, error) {
 	populateConfigFromFlags(cmd)
 	outputFile, _ := cmd.Flags().GetString("output")
 	force, _ := cmd.Flags().GetBool("force")
+	forceFlatten, _ := cmd.Flags().GetBool("force-flatten")
 
 	if cliConfig.Production {
 		cliConfig.DryRun = false
@@ -31,10 +32,10 @@ func processConfig(cmd *cobra.Command) (*config.Config, string, bool, error) {
 
 	cfg, err := config.LoadConfig(cliConfig.ConfigPath)
 	if err != nil {
-		return nil, "", false, fmt.Errorf("failed to load config at %s: %w", cliConfig.ConfigPath, err)
+		return nil, "", false, false, fmt.Errorf("failed to load config at %s: %w", cliConfig.ConfigPath, err)
 	}
 
-	return cfg, outputFile, force, nil
+	return cfg, outputFile, force, forceFlatten, nil
 }
 
 func setupLogger() *slog.Logger {
@@ -95,9 +96,29 @@ func handleOutput(cmd *cobra.Command, outputFile string, finalOutput *strings.Bu
 var flattenCmd = &cobra.Command{
 	Use:   "flatten",
 	Short: "Flatten SPF records for all configured domains.",
-	Long:  `...`,
+	Long: `Flatten SPF records for all configured domains by resolving include:, a:, and mx: mechanisms into IP addresses.
+
+This command performs DNS lookup counting to determine if SPF flattening is necessary:
+- SPF records requiring >10 DNS lookups exceed RFC 7208 limits and will be automatically flattened
+- SPF records requiring ≤10 DNS lookups are RFC 7208 compliant and will NOT be flattened (unless --force-flatten is used)
+- The --force-flatten flag bypasses this threshold check and always performs flattening
+
+DNS lookup counting includes:
+- Each include: mechanism (including duplicates)
+- Each a: and mx: mechanism
+- The initial TXT lookup for the domain
+
+Examples:
+  # Flatten only domains that exceed 10 DNS lookups
+  spf-flattener flatten --config config.yaml
+
+  # Force flattening even for compliant records
+  spf-flattener flatten --config config.yaml --force-flatten
+
+  # Dry run to see what would be changed
+  spf-flattener flatten --config config.yaml --dry-run`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, outputFile, force, err := processConfig(cmd)
+		cfg, outputFile, force, forceFlatten, err := processConfig(cmd)
 		if err != nil {
 			cmd.PrintErrf("Error: %v\n", err)
 			return
@@ -109,7 +130,7 @@ var flattenCmd = &cobra.Command{
 		dnsProvider := setupDNSProvider(cfg)
 
 		// Create domain processor with business logic (available for future refactoring)
-		_ = processor.NewDomainProcessor(dnsProvider, cliConfig.Debug, cliConfig.DryRun, cliConfig.SpfUnflat)
+		_ = processor.NewDomainProcessor(dnsProvider, cliConfig.Debug, cliConfig.DryRun, cliConfig.SpfUnflat, cliConfig.Aggregate)
 
 		// --- Main Processing Logic ---
 		// Create worker pool with maximum of 5 concurrent domain processors
@@ -147,7 +168,7 @@ var flattenCmd = &cobra.Command{
 					spfLookupName = "spf-unflat." + d.Name
 				}
 
-				originalSPF, flattenedSPF, err := spf.FlattenSPF(ctx, spfLookupName, dnsProvider)
+				originalSPF, flattenedSPF, lookupCount, wasFlattened, err := spf.FlattenSPFWithThreshold(ctx, spfLookupName, dnsProvider, cliConfig.Aggregate, forceFlatten)
 				if err != nil {
 					resultBuf.WriteString("\n===== Error processing domain: ")
 					resultBuf.WriteString(d.Name)
@@ -251,6 +272,25 @@ var flattenCmd = &cobra.Command{
 				resultBuf.WriteString(" \n\n")
 				resultBuf.WriteString("---")
 				resultBuf.WriteString(" SPF Summary ---")
+				resultBuf.WriteString("\n\n")
+				resultBuf.WriteString("DNS Lookups Required: ")
+				resultBuf.WriteString(strconv.Itoa(lookupCount))
+				if lookupCount > 10 {
+					resultBuf.WriteString(" (EXCEEDS RFC 7208 LIMIT)")
+				} else {
+					resultBuf.WriteString(" (RFC 7208 compliant)")
+				}
+				resultBuf.WriteString("\n")
+				resultBuf.WriteString("Flattening Performed: ")
+				if wasFlattened {
+					if forceFlatten && lookupCount <= 10 {
+						resultBuf.WriteString("Yes (forced)")
+					} else {
+						resultBuf.WriteString("Yes (required)")
+					}
+				} else {
+					resultBuf.WriteString("No (not needed)")
+				}
 				resultBuf.WriteString("\n\n")
 				resultBuf.WriteString("Current Aggregate SPF:\n")
 				resultBuf.WriteString(currentAggregate)
@@ -524,4 +564,6 @@ func init() {
 	flattenCmd.Flags().String("output", "", "Write final reports to a specified file instead of stdout")
 	flattenCmd.Flags().Bool("production", false, "Enable production mode (live DNS updates)") // New flag
 	flattenCmd.Flags().Bool("force", false, "Force update DNS records regardless of changes") // Force flag
+	flattenCmd.Flags().Bool("force-flatten", false, "Force SPF flattening even if DNS lookups are ≤10 (RFC 7208 compliant)")
+	flattenCmd.Flags().Bool("aggregate", false, "Perform CIDR aggregation on IP addresses before creating SPF records")
 }

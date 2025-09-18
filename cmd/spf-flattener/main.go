@@ -18,6 +18,7 @@ type CLIConfig struct {
 	Verbose    bool
 	Production bool
 	DryRun     bool
+	Aggregate  bool
 }
 
 var cliConfig = &CLIConfig{}
@@ -33,7 +34,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolVar(&cliConfig.SpfUnflat, "spf-unflat", false, "Enable SPF unflattened mode")
+	rootCmd.PersistentFlags().BoolVar(&cliConfig.SpfUnflat, "spf-unflat", false, "Use spf-unflat.<domain> TXT record as source instead of main SPF record (preserves original unflattened SPF for future updates)")
 	rootCmd.PersistentFlags().StringVar(&cliConfig.ConfigPath, "config", "config.yaml", "Path to configuration file")
 	rootCmd.PersistentFlags().BoolVar(&cliConfig.Debug, "debug", false, "Enable debug output")
 	rootCmd.PersistentFlags().BoolVar(&cliConfig.Verbose, "verbose", false, "Enable verbose output")
@@ -72,6 +73,9 @@ func populateConfigFromFlags(cmd *cobra.Command) {
 	}
 	if production, err := cmd.Flags().GetBool("production"); err == nil {
 		cliConfig.Production = production
+	}
+	if aggregate, err := cmd.Flags().GetBool("aggregate"); err == nil {
+		cliConfig.Aggregate = aggregate
 	}
 }
 

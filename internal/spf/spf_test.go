@@ -103,7 +103,7 @@ func TestFlattenSPF(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, flattened, err := FlattenSPF(context.Background(), tc.domain, tc.provider)
+			_, flattened, err := FlattenSPF(context.Background(), tc.domain, tc.provider, false)
 			if (err != nil) != tc.hasError {
 				t.Fatalf("Expected error: %v, got: %v", tc.hasError, err)
 			}
@@ -125,7 +125,7 @@ func TestFlattenSPF_RecursionErrors(t *testing.T) {
 		},
 	}
 
-	_, _, err := FlattenSPF(context.Background(), "example.com", provider)
+	_, _, err := FlattenSPF(context.Background(), "example.com", provider, false)
 	if err == nil {
 		t.Errorf("Expected recursion error, got nil")
 	}
@@ -150,7 +150,7 @@ func TestFlattenSPF_MaxDepthExceeded(t *testing.T) {
 		},
 	}
 
-	_, _, err := FlattenSPF(context.Background(), "level0.com", provider)
+	_, _, err := FlattenSPF(context.Background(), "level0.com", provider, false)
 	if err == nil {
 		t.Errorf("Expected depth exceeded error, got nil")
 	}

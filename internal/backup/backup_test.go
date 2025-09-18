@@ -75,6 +75,11 @@ func (m *MockDNSClient) BulkDeleteRecords(domain string, recordIDs []string) err
 	return args.Error(0)
 }
 
+func (m *MockDNSClient) Attribution() string {
+	args := m.Called()
+	return args.String(0)
+}
+
 func TestNewBackupManager(t *testing.T) {
 	mockClient := new(MockDNSClient)
 	logger := log.Default()
@@ -136,6 +141,7 @@ func TestBackupManager_ExportRecords_Success(t *testing.T) {
 	}
 
 	mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil)
+	mockClient.On("Attribution").Return("Test Provider")
 	mockClient.On("RetrieveAllRecords", "example.com").Return(sampleRecords, nil)
 
 	config := BackupManagerConfig{
@@ -165,6 +171,7 @@ func TestBackupManager_ExportRecords_APIError(t *testing.T) {
 	logger := log.Default()
 
 	// Setup mock to return error on first call, success on second
+	mockClient.On("Attribution").Return("Test Provider").Maybe()
 	mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil)
 	mockClient.On("RetrieveAllRecords", "example.com").Return([]BackupDNSRecord{}, assert.AnError)
 
@@ -192,6 +199,7 @@ func TestBackupManager_ExportRecords_ConnectivityError(t *testing.T) {
 	logger := log.Default()
 
 	// Setup mock to return ping error
+	mockClient.On("Attribution").Return("Test Provider").Maybe()
 	mockClient.On("Ping").Return(&PingResponse{}, assert.AnError)
 
 	config := BackupManagerConfig{
@@ -218,6 +226,7 @@ func TestBackupManager_ImportRecords_Success(t *testing.T) {
 	logger := log.Default()
 
 	// Setup mock expectations
+	mockClient.On("Attribution").Return("Test Provider").Maybe()
 	mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil).Maybe()
 	mockClient.On("RetrieveAllRecords", "example.com").Return([]BackupDNSRecord{}, nil)
 	mockClient.On("BulkCreateRecords", "example.com", mock.AnythingOfType("[]backup.BackupDNSRecord")).Return(nil)
@@ -405,6 +414,7 @@ func TestBackupManager_ImportRecords_CancelledContext(t *testing.T) {
 
 	// Setup mock to delay execution
 	mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil)
+	mockClient.On("Attribution").Return("Test Provider")
 	mockClient.On("BulkCreateRecords", "example.com", mock.AnythingOfType("[]backup.BackupDNSRecord")).Return(nil).After(100 * time.Millisecond)
 
 	config := BackupManagerConfig{

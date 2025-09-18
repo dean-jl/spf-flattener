@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/dean-jl/spf-flattener/internal/config"
 	"github.com/dean-jl/spf-flattener/internal/porkbun"
@@ -16,15 +17,17 @@ type DomainProcessor struct {
 	debug       bool
 	dryRun      bool
 	spfUnflat   bool
+	aggregate   bool
 }
 
 // NewDomainProcessor creates a new domain processor
-func NewDomainProcessor(dnsProvider spf.DNSProvider, debug, dryRun, spfUnflat bool) *DomainProcessor {
+func NewDomainProcessor(dnsProvider spf.DNSProvider, debug, dryRun, spfUnflat, aggregate bool) *DomainProcessor {
 	return &DomainProcessor{
 		dnsProvider: dnsProvider,
 		debug:       debug,
 		dryRun:      dryRun,
 		spfUnflat:   spfUnflat,
+		aggregate:   aggregate,
 	}
 }
 
@@ -54,8 +57,11 @@ func (dp *DomainProcessor) ProcessDomain(ctx context.Context, domain config.Doma
 		spfLookupName = "spf-unflat." + domain.Name
 	}
 
+	// Determine if aggregation should be used for this domain
+	domainAggregateEnabled := domain.GetAggregationEnabled(dp.aggregate)
+
 	// Flatten SPF record
-	originalSPF, flattenedSPF, err := spf.FlattenSPF(ctx, spfLookupName, dp.dnsProvider)
+	originalSPF, flattenedSPF, err := spf.FlattenSPF(ctx, spfLookupName, dp.dnsProvider, domainAggregateEnabled)
 	if err != nil {
 		result.Error = fmt.Errorf("failed to flatten SPF for %s: %w", domain.Name, err)
 		return result
@@ -88,7 +94,7 @@ func (dp *DomainProcessor) ProcessDomain(ctx context.Context, domain config.Doma
 	}
 
 	// Detect changes
-	changes, hasChanges := dp.detectChanges(existingSPFTXTRecords, flattenedSPF, domain.Name)
+	changes, hasChanges := dp.detectChanges(existingSPFTXTRecords, flattenedSPF, domain.Name, domainAggregateEnabled)
 	result.HasChanges = hasChanges
 	result.Changes = changes
 
@@ -100,7 +106,7 @@ func (dp *DomainProcessor) ProcessDomain(ctx context.Context, domain config.Doma
 }
 
 // detectChanges compares existing records with flattened SPF and returns changes needed
-func (dp *DomainProcessor) detectChanges(existingRecords map[string]string, flattenedSPF, domain string) ([]string, bool) {
+func (dp *DomainProcessor) detectChanges(existingRecords map[string]string, flattenedSPF, domain string, aggregateEnabled bool) ([]string, bool) {
 	var changes []string
 	hasChanges := false
 
@@ -115,10 +121,19 @@ func (dp *DomainProcessor) detectChanges(existingRecords map[string]string, flat
 		}
 
 		if existing, exists := existingRecords[displayName]; exists {
-			normalizedExisting, _ := spf.NormalizeSPF(existing)
-			normalizedExpected, _ := spf.NormalizeSPF(expectedContent)
+			var recordsChanged bool
 
-			if normalizedExisting != normalizedExpected {
+			// If aggregation is enabled, perform semantic comparison
+			if aggregateEnabled {
+				recordsChanged = spf.SPFSemanticallyDifferent(existing, expectedContent)
+			} else {
+				// Use existing string-based comparison
+				normalizedExisting, _ := spf.NormalizeSPF(existing)
+				normalizedExpected, _ := spf.NormalizeSPF(expectedContent)
+				recordsChanged = (normalizedExisting != normalizedExpected)
+			}
+
+			if recordsChanged {
 				changes = append(changes, fmt.Sprintf("UPDATE %s: %s -> %s", displayName, existing, expectedContent))
 				hasChanges = true
 			}
@@ -153,6 +168,11 @@ func (dp *DomainProcessor) detectChanges(existingRecords map[string]string, flat
 // generateReport creates a formatted report for the domain processing
 func (dp *DomainProcessor) generateReport(domain, originalSPF, flattenedSPF string, existingRecords map[string]string, changes []string, hasChanges bool) string {
 	var report strings.Builder
+
+	// Add timestamp as first line
+	report.WriteString("Generated: ")
+	report.WriteString(time.Now().Format("2006-01-02 15:04:05 MST"))
+	report.WriteString("\n")
 
 	report.WriteString("\n===== Processing domain: ")
 	report.WriteString(domain)

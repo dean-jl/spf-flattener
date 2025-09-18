@@ -41,7 +41,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const Version = "1.0.0"
+const Version = "1.1.0"
 
 const (
 	EnvAPIKey    = "SPF_FLATTENER_API_KEY"
@@ -96,15 +96,24 @@ type Config struct {
 }
 
 type Domain struct {
-	Name              string            `yaml:"name" validate:"required"`
-	Provider          string            `yaml:"provider"`          // Per-domain provider override
-	Options           map[string]string `yaml:"options,omitempty"` // Provider-specific options
-	ApiKey            string            `yaml:"api_key,omitempty" validate:"required"`
-	SecretKey         string            `yaml:"secret_key,omitempty" validate:"required"`
-	OldRecordsLogFile string            `yaml:"old_records_log_file,omitempty"`
-	TTL               int               `yaml:"ttl,omitempty"`
-	Logging           *bool             `yaml:"logging,omitempty"`
-	DryRun            *bool             `yaml:"dry_run,omitempty"`
+	Name              string             `yaml:"name" validate:"required"`
+	Provider          string             `yaml:"provider"`          // Per-domain provider override
+	Options           map[string]string  `yaml:"options,omitempty"` // Provider-specific options
+	ApiKey            string             `yaml:"api_key,omitempty" validate:"required"`
+	SecretKey         string             `yaml:"secret_key,omitempty" validate:"required"`
+	OldRecordsLogFile string             `yaml:"old_records_log_file,omitempty"`
+	TTL               int                `yaml:"ttl,omitempty"`
+	Logging           *bool              `yaml:"logging,omitempty"`
+	DryRun            *bool              `yaml:"dry_run,omitempty"`
+	Aggregation       *AggregationConfig `yaml:"aggregation,omitempty"`
+}
+
+// AggregationConfig contains per-domain CIDR aggregation settings
+type AggregationConfig struct {
+	Enabled            *bool    `yaml:"enabled,omitempty"`             // Override global --aggregate flag per domain
+	IPv4MaxPrefix      int      `yaml:"ipv4_max_prefix,omitempty"`     // Maximum IPv4 CIDR prefix (default: 24)
+	IPv6MaxPrefix      int      `yaml:"ipv6_max_prefix,omitempty"`     // Maximum IPv6 CIDR prefix (default: 64)
+	PreserveIndividual []string `yaml:"preserve_individual,omitempty"` // List of IPs to never aggregate
 }
 
 // Validate validates the configuration using struct tags
@@ -218,4 +227,39 @@ func (c *Config) SetDefaultTTL() {
 			c.Domains[i].TTL = 600
 		}
 	}
+}
+
+// GetAggregationEnabled returns whether aggregation is enabled for this domain.
+// It checks the per-domain setting first, then falls back to the global flag.
+func (d *Domain) GetAggregationEnabled(globalAggregate bool) bool {
+	if d.Aggregation != nil && d.Aggregation.Enabled != nil {
+		return *d.Aggregation.Enabled
+	}
+	return globalAggregate
+}
+
+// GetIPv4MaxPrefix returns the maximum IPv4 CIDR prefix for aggregation.
+// Default is 24 if not specified.
+func (d *Domain) GetIPv4MaxPrefix() int {
+	if d.Aggregation != nil && d.Aggregation.IPv4MaxPrefix > 0 {
+		return d.Aggregation.IPv4MaxPrefix
+	}
+	return 24 // Default maximum prefix
+}
+
+// GetIPv6MaxPrefix returns the maximum IPv6 CIDR prefix for aggregation.
+// Default is 64 if not specified.
+func (d *Domain) GetIPv6MaxPrefix() int {
+	if d.Aggregation != nil && d.Aggregation.IPv6MaxPrefix > 0 {
+		return d.Aggregation.IPv6MaxPrefix
+	}
+	return 64 // Default maximum prefix
+}
+
+// GetPreserveIndividual returns the list of IPs that should never be aggregated.
+func (d *Domain) GetPreserveIndividual() []string {
+	if d.Aggregation != nil {
+		return d.Aggregation.PreserveIndividual
+	}
+	return []string{}
 }

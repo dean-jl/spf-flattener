@@ -105,9 +105,20 @@ func testExportImportFormat(t *testing.T, tempDir string, recordSet *DNSRecordSe
 	assert.Equal(t, recordSet.Version, importedRecordSet.Version)
 	assert.Equal(t, len(recordSet.Records), len(importedRecordSet.Records))
 
-	// Verify each record
-	for i, expectedRecord := range recordSet.Records {
-		actualRecord := importedRecordSet.Records[i]
+	// Verify each record (order-independent comparison)
+	expectedMap := make(map[string]DNSRecord)
+	for _, record := range recordSet.Records {
+		expectedMap[record.ID] = record
+	}
+
+	actualMap := make(map[string]DNSRecord)
+	for _, record := range importedRecordSet.Records {
+		actualMap[record.ID] = record
+	}
+
+	for id, expectedRecord := range expectedMap {
+		actualRecord, exists := actualMap[id]
+		assert.True(t, exists, "Record with ID %s not found", id)
 		assert.Equal(t, expectedRecord.ID, actualRecord.ID)
 		assert.Equal(t, expectedRecord.Name, actualRecord.Name)
 		assert.Equal(t, expectedRecord.Type, actualRecord.Type)
@@ -238,6 +249,7 @@ func TestBackupManagerIntegration(t *testing.T) {
 		},
 	}
 
+	mockClient.On("Attribution").Return("Test Provider").Maybe()
 	mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil)
 	// First call for export
 	mockClient.On("RetrieveAllRecords", "example.com").Return(exportRecords, nil).Once()
@@ -346,6 +358,7 @@ func TestConcurrentOperations(t *testing.T) {
 	var managers []*BackupManager
 	for i := 0; i < 3; i++ {
 		mockClient := new(MockDNSClient)
+		mockClient.On("Attribution").Return("Test Provider").Maybe()
 		mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil)
 		mockClient.On("RetrieveAllRecords", "example.com").Return([]BackupDNSRecord{
 			{

@@ -19,6 +19,7 @@ func TestEdgeCases(t *testing.T) {
 		logger := log.Default()
 
 		// Setup mock to return ping error
+		mockClient.On("Attribution").Return("Test Provider").Maybe()
 		mockClient.On("Ping").Return(&PingResponse{}, errors.New("connection failed"))
 
 		config := BackupManagerConfig{
@@ -41,6 +42,7 @@ func TestEdgeCases(t *testing.T) {
 		mockClient := new(MockDNSClient)
 		logger := log.Default()
 
+		mockClient.On("Attribution").Return("Test Provider").Maybe()
 		mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil)
 		mockClient.On("RetrieveAllRecords", "example.com").Return([]BackupDNSRecord{}, nil)
 
@@ -135,6 +137,7 @@ func TestEdgeCases(t *testing.T) {
 			},
 		}
 
+		mockClient.On("Attribution").Return("Test Provider").Maybe()
 		mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil)
 		mockClient.On("RetrieveAllRecords", "example.com").Return(records, nil)
 
@@ -164,6 +167,7 @@ func TestRetryLogic(t *testing.T) {
 		logger := log.Default()
 
 		// Setup mock to return error on first call, success on second
+		mockClient.On("Attribution").Return("Test Provider").Maybe()
 		mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil)
 		mockClient.On("RetrieveAllRecords", "example.com").Return([]BackupDNSRecord{}, errors.New("temporary failure")).Once()
 		mockClient.On("RetrieveAllRecords", "example.com").Return([]BackupDNSRecord{
@@ -199,6 +203,7 @@ func TestRetryLogic(t *testing.T) {
 		mockClient := new(MockDNSClient)
 		logger := log.Default()
 
+		mockClient.On("Attribution").Return("Test Provider").Maybe()
 		mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil)
 		mockClient.On("RetrieveAllRecords", "example.com").Return([]BackupDNSRecord{}, errors.New("persistent error"))
 
@@ -227,6 +232,7 @@ func TestConcurrentAccess(t *testing.T) {
 	logger := log.Default()
 
 	// Setup mock to handle concurrent calls
+	mockClient.On("Attribution").Return("Test Provider").Maybe()
 	mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil)
 	mockClient.On("RetrieveAllRecords", mock.AnythingOfType("string")).Return([]BackupDNSRecord{
 		{
@@ -313,6 +319,7 @@ func TestInvalidDataHandling(t *testing.T) {
 			},
 		}
 
+		mockClient.On("Attribution").Return("Test Provider").Maybe()
 		mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil)
 		mockClient.On("RetrieveAllRecords", "example.com").Return(records, nil)
 
@@ -349,6 +356,7 @@ func TestInvalidDataHandling(t *testing.T) {
 			},
 		}
 
+		mockClient.On("Attribution").Return("Test Provider").Maybe()
 		mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil)
 		mockClient.On("RetrieveAllRecords", "example.com").Return(records, nil)
 
@@ -422,6 +430,7 @@ func TestCancellationHandling(t *testing.T) {
 		logger := log.Default()
 
 		// Setup mock to return error on cancelled context
+		mockClient.On("Attribution").Return("Test Provider").Maybe()
 		mockClient.On("Ping").Return(&PingResponse{Status: "SUCCESS", YourIP: "1.2.3.4"}, nil).Maybe()
 		mockClient.On("RetrieveAllRecords", "example.com").Return([]BackupDNSRecord{}, context.Canceled).Maybe()
 
