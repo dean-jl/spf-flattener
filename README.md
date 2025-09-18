@@ -113,6 +113,14 @@ go test ./...
 - Requires API keys with DNS read/write permissions
 - Consider trade-offs before flattening your SPF records
 
+## 🤖 Authorship & AI Assistance
+
+This application was developed with the assistance of AI tools, guided and validated by human authorship. All architectural decisions, testing, and final implementation were reviewed and refined by the maintainer.
+
+While AI tools supported code generation and scaffolding, the design, logic, and operational validation were shaped by human insight. This includes scenario modeling, DNS architecture decisions, and CLI behavior refinement.
+
+The maintainer retains copyright over the human-authored portions of this work.
+
 ## 📝 License
 
 Licensed under [GNU AGPLv3](https://www.gnu.org/licenses/agpl-3.0.en.html)
